@@ -37,6 +37,6 @@ jobs:
           #platforms: linux/amd64,linux/arm64
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/eric-philippe/cril-bot-main:latest
+          tags: ghcr.io/eric-wahl/cril-bot-main:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
