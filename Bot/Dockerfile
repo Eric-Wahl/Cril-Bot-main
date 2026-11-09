@@ -21,7 +21,10 @@ WORKDIR /app
 
 # Install app dependencies
 COPY package*.json ./
-RUN npm install
+# canvas has no musl prebuilt binary, so it compiles from source. Its
+# FontParser sources miss `#include <cstdint>`, which the newer GCC on Alpine
+# no longer pulls in transitively, so force-include it.
+RUN CXXFLAGS="-include cstdint" npm install
 
 # Clean up build dependencies to reduce image size
 RUN apk del python3 make g++ pkgconfig
