@@ -74,7 +74,84 @@ class TextToInscriptions {
     return textRows;
   }
 
+  /**
+   * Fallback for text without any tabulation (e.g. typed in a slash command).
+   * Expected shape after the header:
+   *   <Atelier|Coaching> <activity...> HH:MM <language> <level>
+   *   then, for each student: <lastname...> <firstname> BUT <year> <dept> [validation]
+   */
+  public static parseSpaceSeparatedRows(text: string): string[][] {
+    const tokens = text.trim().split(/\s+/);
+    const isMarker = (t: string) => t === "Atelier" || t === "Coaching";
+    const isTime = (t: string) => /^\d{1,2}:\d{2}$/.test(t);
+    const isGroupStart = (t: string) => t === "BUT";
+
+    const start = tokens.findIndex(isMarker);
+    if (start === -1) {
+      throw new Error("Format invalide : 'Atelier' ou 'Coaching' introuvable.");
+    }
+
+    const rows: string[][] = [];
+    let type = "",
+      activity = "",
+      slot = "",
+      language = "",
+      level = "";
+    let i = start;
+
+    while (i < tokens.length) {
+      if (isMarker(tokens[i])) {
+        type = tokens[i++];
+        const act: string[] = [];
+        while (i < tokens.length && !isTime(tokens[i])) act.push(tokens[i++]);
+        if (i >= tokens.length) {
+          throw new Error("Format invalide : créneau horaire introuvable.");
+        }
+        activity = act.join(" ");
+        slot = tokens[i++];
+        language = tokens[i++] ?? "";
+        level = tokens[i++] ?? "";
+        continue;
+      }
+
+      // Student: name tokens up to the group
+      const name: string[] = [];
+      while (i < tokens.length && !isGroupStart(tokens[i]) && !isMarker(tokens[i])) {
+        name.push(tokens[i++]);
+      }
+      if (i >= tokens.length || isMarker(tokens[i]) || name.length < 2) {
+        throw new Error(
+          `Format invalide : étudiant illisible près de "${name.join(" ")}".`
+        );
+      }
+      const firstname = name.pop() as string;
+      const lastname = name.join(" ");
+      const group = tokens.slice(i, i + 3).join(" ");
+      i += 3;
+
+      // Optional validation word(s) right after the group
+      let validation = "";
+      for (const word of PRESENCE_WORDS) {
+        const w = word.split(" ");
+        if (tokens.slice(i, i + w.length).join(" ") === word) {
+          validation = word;
+          i += w.length;
+          break;
+        }
+      }
+
+      rows.push([
+        type, activity, slot, language, level,
+        lastname, firstname, group, "", "", "", validation,
+      ]);
+    }
+
+    return rows;
+  }
+
   public static parseTextToRows(text: string): string[][] {
+    if (!text.includes("\t")) return TextToInscriptions.parseSpaceSeparatedRows(text);
+
     // Split the text by the tabulation
     const rowsText = text.trim().split("\t ");
     // Find the first "Atelier"/"Coaching" marker, preceded by any whitespace
