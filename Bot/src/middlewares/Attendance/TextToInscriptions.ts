@@ -77,16 +77,23 @@ class TextToInscriptions {
   public static parseTextToRows(text: string): string[][] {
     // Split the text by the tabulation
     const rowsText = text.trim().split("\t ");
-    let firstWord;
-    // If the first word is Atelier, we keep it
-    if (rowsText[0].includes("Atelier")) firstWord = "Atelier";
-    else firstWord = "Coaching";
+    // Find the first "Atelier"/"Coaching" marker, preceded by any whitespace
+    // (space, tab or newline depending on how the text was copied)
+    const match = /\s+(Atelier|Coaching)(?=\s|$)/.exec(rowsText[0]);
+    if (!match) {
+      throw new Error(
+        "Format invalide : impossible de trouver 'Atelier' ou 'Coaching' après l'en-tête."
+      );
+    }
+    const firstWord = match[1];
 
-    // Split the first row by the first word
-    const firstRowSplitted = rowsText[0].split(` ${firstWord}`);
-    rowsText[0] = firstRowSplitted[0];
-    // Put the [1] of the split at the second place
-    rowsText.splice(1, 0, firstRowSplitted[1]);
+    // Split the first row around the marker
+    const header = rowsText[0].slice(0, match.index);
+    const tail = rowsText[0].slice(match.index + match[0].length).replace(/^\s+/, "");
+    rowsText[0] = header;
+    // Put the rest at the second place; the leading tab keeps the first cell
+    // empty so it can be replaced by the marker below
+    rowsText.splice(1, 0, "\t" + tail);
 
     const rowsArray = rowsText.map((row) => row.split("\t"));
     rowsArray[1][0] = firstWord;
