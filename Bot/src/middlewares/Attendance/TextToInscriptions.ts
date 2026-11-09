@@ -150,6 +150,8 @@ class TextToInscriptions {
   }
 
   public static parseTextToRows(text: string): string[][] {
+    // Real table copy (one line per row): same layout as the file format
+    if (/\n/.test(text.trim())) return TextToInscriptions.parseTextFileToRows(text);
     if (!text.includes("\t")) return TextToInscriptions.parseSpaceSeparatedRows(text);
 
     // Split the text by the tabulation
